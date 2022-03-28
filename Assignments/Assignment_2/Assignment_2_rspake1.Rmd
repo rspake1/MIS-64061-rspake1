@@ -1,0 +1,129 @@
+---
+title: "Assignment2_rspake1"
+output: html_document
+---
+
+## Question 1
+
+While studying for this module, I had created the cats and dogs test/validation/train following the steps in the book, so I am simply reusing the same directories here.  
+
+```{r setup, }
+
+base_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small"
+
+train_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/train"
+validation_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/validation"
+test_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/test"
+
+train_cats_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/train/cats"
+
+train_dogs_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/train/dogs"
+
+Validation_dogs_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/validation/dogs"
+
+Validation_cats_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/validation/cats"
+
+test_cats_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/test/cats"
+
+test_dogs_dir <- "~/Cats_and_dogs_small/archive/cats_and_dogs_small/test/cats"
+```
+
+## Building the base model
+
+Following the steps in the model/book, after establishing the directories, we are now building the base model with layer_conv_2d with relu activation, max pooling, finally flattening and a final dense layer with sigmoid activation.
+
+Lastly, we will take a look at the model to make sure we have built it properly.
+
+```{r cars}
+library(keras)
+
+model1 <- keras_model_sequential() %>% 
+  layer_conv_2d(filters = 32, kernel_size = c(3, 3), activation = "relu",
+                input_shape = c(150, 150, 3)) %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_flatten() %>% 
+  layer_dense(units = 512, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+summary(model1)
+```
+Since our last layer in a sigmoid, we will use binary crossentropy as the loss function, as stipulated in the chart in chapter 4 of the book. 
+
+```{r}
+model1 %>% compile(
+  loss = "binary_crossentropy",
+  optimizer = optimizer_rmsprop(learning_rate = 1e-4),
+  metrics = c("acc")
+)
+```
+
+## Preprocessing of our data
+
+
+
+```{r}
+train_datagen <- image_data_generator(rescale = 1/255)
+validation_datagen <- image_data_generator(rescale = 1/255)
+
+train_generator <- flow_images_from_directory(
+  train_dir,
+  train_datagen,
+  target_size = c(150,150),
+  batch_size = 20,
+  class_mode = "binary"
+)
+
+validation_generator <- flow_images_from_directory(
+  validation_dir,
+  validation_datagen,
+  target_size = c(150,150),
+  batch_size = 20,
+  class_mode = "binary"
+)
+
+batch <- generator_next(train_generator)
+str(batch)
+
+```
+Now it is time to fit the model the the data.
+
+```{r}
+history1 <- model1 %>% fit_generator(
+  train_generator,
+  steps_per_epoch = 100,
+  epochs = 30,
+  validation_data = validation_generator,
+  validation_steps = 50
+)
+```
+As we see in the plot below of History1, the model has an "elbow" point around 10 epochs and is suffering from some heavy overfitting with a val accuracy of 7.33 as a relative high point.
+
+
+```{r}
+plot(history1)
+```
+```{r}
+model1 %>% save_model_hdf5("cats_and_dogs_small_1.h5")
+```
+
+
+
+#Optimizing using dropout and augmentation
+We will optimize our model by using augmentation and dropout to combat overfitting.
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
