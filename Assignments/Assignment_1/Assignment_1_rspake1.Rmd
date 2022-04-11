@@ -1,5 +1,5 @@
 ---
-title: "Assifnment_1_rspake1"
+title: "Assignment_1_rspake1"
 output:
   html_document:
     df_print: paged
