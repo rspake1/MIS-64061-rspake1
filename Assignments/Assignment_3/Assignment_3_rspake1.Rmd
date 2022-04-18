@@ -1,0 +1,49 @@
+---
+title: "Assignment_3_rspake1"
+output: html_document
+---
+## Set up for our model
+
+```{r cars}
+library(keras)
+
+maxlen <- 150
+training_samples <- 100
+validation_samples <- 10000
+max_features <- 10000
+
+imdb <- dataset_imdb(num_words = max_features)
+c(c(x_train, y_train), c(x_test, y_test)) %<-% imdb
+
+x_train <- pad_sequences(x_train, maxlen = maxlen)
+x_test <- pad_sequences(x_test, maxlen = maxlen)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r model}
+library(keras)
+
+max_features <- 10000
+maxlen <- 150
+batch_size <- 32
+cat("Loading data...\n")
+imdb <- dataset_imdb(num_words = max_features)
+c(c(input_train, y_train), c(input_test,y_test)) %<-% imdb 
+cat(length(input_train), "train sequences\n")
+cat(length(input_test), "test seuences")
+
+cat("Pad sequences (samples x times)\n")
+input_train <- pad_sequences(input_train, maxlen = maxlen)
+input_test <- pad_sequences(input_test, maxlen = maxlen)
+cat("input_train shape:", dim(input_train), "\n")
+cat("input_test shape:", dim(input_test), "\n")
+```
+
+```{r}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
