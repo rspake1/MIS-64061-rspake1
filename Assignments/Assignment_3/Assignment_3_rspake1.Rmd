@@ -11,12 +11,21 @@ training_samples <- 100
 validation_samples <- 10000
 max_features <- 10000
 
-imdb <- dataset_imdb(num_words = max_features)
-c(c(x_train, y_train), c(x_test, y_test)) %<-% imdb
+imdb_dir <- "C:/Users/rspake1/Downloads/aclImdb"
+train_dir <- file.path(imdb_dir, "train")
 
-Data = imdb$train$x
-Labels = imdb$train$y
+labels <- c()
+texts <- c()
 
+for (label_type in c("neg", "pos")) {
+  label <- switch(label_type, neg = 0, pos = 1)
+  dir_name <- file.path(train_dir, label_type)
+  for (fname in list.files(dir_name, pattern = glob2rx("*.txt"), 
+                           full.names = TRUE)) {
+    texts <- c(texts, readChar(fname, file.info(fname)$size))
+    labels <- c(labels, label)
+  }
+}
 ```
 
 
@@ -25,13 +34,30 @@ Labels = imdb$train$y
 We will be using those parameters we established earlier for validation and training size. 
 
 ```{r}
-x_train <- Data[1:training_samples]
-x_val <- Data[(training_samples + 1):
-                              (training_samples + validation_samples)]
-y_train <- Labels[1:training_samples]
-y_val <- Labels[(training_samples + 1):
+tokenizer <- text_tokenizer(num_words = max_features) %>% 
+  fit_text_tokenizer(texts)
+
+sequences <- texts_to_sequences(tokenizer, texts)
+
+word_index = tokenizer$word_index
+cat("Found", length(word_index), "unique tokens.\n")
+
+data <- pad_sequences(sequences, maxlen = maxlen)
+
+labels <- as.array(labels)
+cat("Shape of data tensor:", dim(data), "\n")
+cat('Shape of label tensor:', dim(labels), "\n")
+
+indices <- sample(1:nrow(data))
+training_indices <- indices[1:training_samples]
+validation_indices <- indices[(training_samples + 1): 
                               (training_samples + validation_samples)]
 
+x_train <- data[training_indices,]
+y_train <- labels[training_indices]
+
+x_val <- data[validation_indices,]
+y_val <- labels[validation_indices]
 ```
 
 ## Preprocessing for embedding
@@ -68,53 +94,161 @@ for(word in names(word_index)) {
 
 ```
 
+## Defining our pre-trained model
 
-```{r}
-model1 <- keras_model_sequential() %>% 
-  layer_embedding(input_dim = 10000, output_dim = 8,
+```{r model1}
+model1 <- keras_model_sequential() %>%
+  layer_embedding(input_dim = max_features, output_dim = embedding_dim,
                   input_length = maxlen) %>%
   layer_flatten() %>%
+  layer_dense(units = 32, activation = "relu") %>%
   layer_dense(units = 1, activation = "sigmoid")
+```
 
+## Loading GloVe into our model
+
+```{r}
+get_layer(model1, index = 1) %>% 
+  set_weights(list(embedding_matrix)) %>%
+  freeze_weights()
+```
+
+## Training/Evaluation
+
+```{r}
 model1 %>% compile(
   optimizer = "rmsprop",
   loss = "binary_crossentropy",
   metrics = c("acc")
 )
-history <- model1 %>% fit(
+
+history1 <- model1 %>% fit(
+  x_train, y_train,
+  epochs = 20,
+  batch_size = 32,
+  validation_data = list(x_val, y_val)
+)
+
+save_model_weights_hdf5(model1, "pre_trained_glove-model1.h5")
+```
+
+Lastly, we will plot this history so that we can compare it to the next model we make.
+```{r}
+plot(history1)
+```
+
+
+As we can see here, this model overfits (basically) instantly. This is not very surprising as the training sample is very small and we already know that overfitting is bound to happen at small sample sizes. Our performance here isn't great as we hit the bend at **56%** accuracy.
+
+## Building an embedding layer ourselves
+
+now we will build an embedding layer ourselves instead of relying on a pre-trained set. 
+
+```{r model2}
+model2 <- keras_model_sequential() %>% 
+  layer_embedding(input_dim = max_features, output_dim = 32,
+                  input_length = maxlen) %>% 
+  layer_flatten() %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+model2 %>% compile(
+  optimizer = "rmsprop",
+  loss = "binary_crossentropy",
+  metrics = c("acc")
+)
+
+history2 <- model2 %>% fit(
   x_train, y_train,
   epochs = 10,
   batch_size = 32,
-  validation_data = list(x_test,y_test)
+  validation_data = list(x_val, y_val)
+)
+
+save_model_weights_hdf5(model2, "assignment_3_model2.h5")
+```
+
+
+Lastly, lets plot our results from this model.
+```{r}
+plot(history2)
+```
+
+Unfortunately, this model does not perform any better than the previous one. With the best accuracy coming out to **51%**
+
+
+## Optimizing our model
+
+Lets adjust our training sample size to see at what point our embedded layer model can perform better.
+
+```{r}
+training_samples2 <- 1500
+
+
+training_indices2 <- indices[1:training_samples2]
+validation_indices2 <- indices[(training_samples2 + 1): 
+                              (training_samples2 + validation_samples)]
+
+x_train2 <- data[training_indices2,]
+y_train2 <- labels[training_indices2]
+
+x_val2 <- data[validation_indices2,]
+y_val2 <- labels[validation_indices2]
+```
+
+We have changed the sample size of the training data from **100** units to **1500** units and will see how changing JUST that effects our model.
+
+```{r model3}
+model3 <- keras_model_sequential() %>% 
+  layer_embedding(input_dim = max_features, output_dim = 32,
+                  input_length = maxlen) %>% 
+  layer_flatten() %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+model3 %>% compile(
+  optimizer = "rmsprop",
+  loss = "binary_crossentropy",
+  metrics = c("acc")
+)
+
+history3 <- model3 %>% fit(
+  x_train2, y_train2,
+  epochs = 10,
+  batch_size = 32,
+  validation_data = list(x_val2, y_val2)
+)
+
+save_model_weights_hdf5(model2, "assignment_3_model3.h5")
+```
+
+
+finally lets see this new model graphically.
+```{r}
+plot(history3)
+```
+
+With this new model, our best performance occurs around epoch 7, with a val_acc of **71%** and a val_loss of **56%** which is much better than the pre-trained model. As we continue to increase the size of the training data, we will continue to see an improvement in the performance of the embedded model.
+
+## New Sample size through pre-Trained Model
+
+Bellow we will put our new sample size through our pre-trained model and see how it is effected, then compare our two new outputs. 
+```{r}
+history4 <- model1 %>% fit(
+  x_train2, y_train2,
+  epochs = 20,
+  batch_size = 32,
+  validation_data = list(x_val2, y_val2)
 )
 ```
 
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r model}
-library(keras)
-
-max_features <- 10000
-maxlen <- 150
-batch_size <- 32
-cat("Loading data...\n")
-imdb <- dataset_imdb(num_words = max_features)
-c(c(input_train, y_train), c(input_test,y_test)) %<-% imdb 
-cat(length(input_train), "train sequences\n")
-cat(length(input_test), "test seuences")
-
-cat("Pad sequences (samples x times)\n")
-input_train <- pad_sequences(input_train, maxlen = maxlen)
-input_test <- pad_sequences(input_test, maxlen = maxlen)
-cat("input_train shape:", dim(input_train), "\n")
-cat("input_test shape:", dim(input_test), "\n")
-```
-
 ```{r}
-
+plot(history1)
+plot(history2)
+plot(history3)
+plot(history4)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Further Proof
+
+To be doubly sure that the embedding model performs better at this sample size, I have added another plot where I applied the new sample size to the pre-trained model as well and have displayed the results above. 
+
