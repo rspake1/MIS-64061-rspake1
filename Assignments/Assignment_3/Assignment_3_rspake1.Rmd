@@ -2,7 +2,7 @@
 title: "Assignment_3_rspake1"
 output: html_document
 ---
-## Set up for our model
+## Set up for our model for pretrained word embedding first
 
 ```{r cars}
 library(keras)
@@ -17,31 +17,54 @@ c(c(x_train, y_train), c(x_test, y_test)) %<-% imdb
 Data = imdb$train$x
 Labels = imdb$train$y
 
-tokenizer <- text_tokenizer(num_words = max_features) %>% 
-  fit_text_tokenizer(Data)
-sequences <- texts_to_sequences(tokenizer, imdb$train)
+```
 
-word_index = tokenizer$word_index
-cat("Found", length(word_index), "unique tokens.\n")
 
-Data <- pad_sequences(sequences, maxlen = maxlen)
-Labels = as.array(Labels)
+## Time to set the right parameters 
 
-cat("Shape of Data tesor:", dim(data), "\n")
-cat('Shape of Label tensor:', dim(Labels), "\n")
+We will be using those parameters we established earlier for validation and training size. 
 
-Index <- sample(1:nrow(Data))
-training_indices <- Index[1:training_samples]
-validation_indices <- Index[(training_samples + 1):
+```{r}
+x_train <- Data[1:training_samples]
+x_val <- Data[(training_samples + 1):
+                              (training_samples + validation_samples)]
+y_train <- Labels[1:training_samples]
+y_val <- Labels[(training_samples + 1):
                               (training_samples + validation_samples)]
 
-x_train <- Data[training_indices,]
-y_train <- Labels[training_indices]
+```
 
-x_val <- Data[validation_indices,]
-y_val <- Labels[validation_indices]
+## Preprocessing for embedding
 
+```{r}
+glove_dir <- "C:/Users/rspake1/Downloads/glove.6B"
+lines <- readLines(file.path(glove_dir, "glove.6B.100d.txt"))
 
+embeddings_index <- new.env(hash = TRUE, parent = emptyenv())
+for (i in 1:length(lines)) {
+  line <- lines[[i]]
+  values <- strsplit(line, " ")[[1]]
+  word <- values[[1]]
+  embeddings_index[[word]] <- as.double(values[-1])
+}
+
+cat("Found", length(embeddings_index), "word vectors. \n")
+```
+## building our embedding matrix
+
+```{r}
+embedding_dim <- 100
+
+embedding_matrix <- array(0, c(max_features, embedding_dim))
+
+for(word in names(word_index)) {
+  index <- word_index[[word]]
+  if (index < max_features) {
+    embedding_vector <- embeddings_index[[word]]
+    if (!is.null(embedding_vector))
+      embedding_matrix[index+1,] <- embedding_vector
+  }
+}
 
 ```
 
