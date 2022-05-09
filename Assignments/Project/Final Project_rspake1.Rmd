@@ -1,0 +1,161 @@
+---
+title: "Final Project_rspake1"
+author: "Ryan Spake"
+date: "5/8/2022"
+output: html_document
+---
+## Final Project
+
+In this project, we have found a dataset on Kaggle that tracks both Dow Jones Industrial Average (DJIA) performance and reddit News articles from r/worldnews subreddit from 2008-06-08 to 2016-07-01 (about 8 years).
+
+The objective of this project is to build a Neural Network that follows the stock market performance and connects it to the top 25 trending news articles on that day to predict daily performance of stocks based off of the news headlines that day. 
+
+## Getting Started
+
+First thing we need to do is call our libraries and pull the combined table that connects top 25 Reddit news to the date (Reddit_df) and the table with daily stock information (DOW_df).
+
+Note:
+In the Reddit_df, a "label" is supplied that indicates if the stock market declined that day (0) and if it stayed the same or did better (1).
+
+
+```{r, }
+library(keras)
+library(caret)
+library(dplyr)
+library(tm)
+
+Reddit_df <- read.csv("C:/Users/rspake1/Desktop/Class work/Advanced machine learning/Final/Combined_News_DJIA/Combined_News_DJIA.csv")
+Dow_df <-  read.csv("C:/Users/rspake1/Desktop/Class work/Advanced machine learning/Final/Combined_News_DJIA/upload_DJIA_table.csv")
+
+set.seed(23)
+
+Combined_df <- Dow_df
+
+Rating_df <- Reddit_df[,1:2]
+
+```
+
+
+```{r}
+vars <- c(names(Reddit_df[,c(3:8)]))
+
+Combined_df$all_news <- apply(Reddit_df[,vars],1,paste,collapse="-")
+colnames(Combined_df)[8] <- "First5"
+
+Rating_df$all_news <- apply(Reddit_df[,vars],1,paste,collapse="-")
+colnames(Rating_df)[3] <- "First5"
+```
+
+
+
+
+```{r}
+maxlen <- 500
+training_samples <- 400
+validation_samples <- 10000
+max_features <- 10000
+
+
+tokenizer <- text_tokenizer(num_words = max_features) %>% 
+  fit_text_tokenizer(Rating_df$First5)
+
+sequences <- texts_to_sequences(tokenizer, Rating_df$First5)
+
+word_index = tokenizer$word_index
+cat("Found", length(word_index), "unique tokens.\n")
+
+data <- pad_sequences(sequences, maxlen = maxlen)
+
+labels <- as.array(Rating_df$Label)
+cat("Shape of data tensor:", dim(data), "\n")
+cat('Shape of label tensor:', dim(labels), "\n")
+
+indices <- sample(1:nrow(data))
+training_indices <- indices[1:training_samples]
+validation_indices <- indices[(training_samples + 1): 
+                              (training_samples + validation_samples)]
+
+Redx_train <- data[training_indices,]
+Redy_train <- labels[training_indices]
+
+Redx_val <- data[validation_indices,]
+Redy_val <- labels[validation_indices]
+
+```
+
+```{r}
+
+Dow_train <- Dow_df[training_indices,]
+Dow_val <- Dow_df[validation_indices,]
+
+train_Y <- Dow_df$Adj.Close[training_indices]
+test_Y <- Dow_df$Adj.Close[validation_indices]
+```
+
+
+```{r}
+x_input <- layer_input(shape = list(NULL),
+                       dtype = "int32", name = "news")
+encoded_x <- x_input %>%
+  layer_embedding(input_dim = max_features, output_dim = 32) %>%
+  layer_lstm(units = 32)
+
+y_input <- layer_input(shape = list(NULL),
+                       dtype = "int32", name = "DOW")
+encoded_y <- y_input %>% 
+  layer_embedding(input_dim = 32, output_dim = max_features) %>%
+  layer_lstm(units = 16)
+
+
+concatenated <- layer_concatenate(list(encoded_x, encoded_y))
+
+answer <- concatenated %>%
+  layer_dense(units = maxlen, activation = "softmax")
+
+model <- keras_model(list(x_input, y_input), answer)
+
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "categorical_crossentropy",
+  metrics = c("acc")
+)
+```
+
+
+```{r}
+history1 <- model %>% fit(
+  list(Redx_train, Dow_train), train_Y,
+  epochs = 10, 
+  batch_size = 128
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+history1 <- model %>% fit(
+  list(news = Redx_train, DOW = Dow_train), answer = train_Y,
+  epochs = 10, 
+  batch_size = 128,
+  validation_data = list(Redx_val, Dow_val), test_Y
+)
+```
+
+
+
+Let's take a look at the data:
+
+```{r, results='hide'}
+Reddit_dir <- "C:/Users/rspake1/Desktop/Class work/Advanced machine learning/Final/Combined_News_DJIA.csv/Combined_News_DJIA"
+Dow_dir <-  "C:/Users/rspake1/Desktop/Class work/Advanced machine learning/Final/Combined_News_DJIA.csv/upload_DJIA_table"
+
+```
