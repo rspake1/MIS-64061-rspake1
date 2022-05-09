@@ -1,1 +1,7 @@
 This is my section for the final assignment where I will be using a Neural Network and the skills taught in the modules to produce a model that will satisfy the requirements.
+
+Just a quick note: I spent 48 STRAIGHT hours on a single model for this project. I was trying to do a multi-input model with numerical information and text data to predict day change based off of news headings and Open market status.
+
+However, on Saturday I discovered that TensorFlow is installed incorrectly on my Device and many packages have been corrupted and I need to reinstall it.
+
+So Due to this, none of my models would graph or get mroe than a single Epoch in before crashing. Hence why my final is a far lower level model.
