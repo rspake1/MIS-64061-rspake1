@@ -4,6 +4,12 @@ author: "Ryan Spake"
 date: "5/8/2022"
 output: html_document
 ---
+
+**Side Note**
+I orginally worked on a mlti-input neural network to make a better analysis of this topic, but the tensor flow at the end did not support the network since the example I was basing it off of in the book was designed for a previou sversion of Tensor Flow and was not supported by the one I was using, so this model you see here is a stripped and downgraded version of that previous model.
+
+
+
 ## Final Project
 
 In this project, we have found a dataset on Kaggle that tracks both Dow Jones Industrial Average (DJIA) performance and reddit News articles from r/worldnews subreddit.
