@@ -1,20 +1,21 @@
 ---
-title: "Final Project_rspake1"
+title: "Final Project rspake1"
 author: "Ryan Spake"
 date: "5/8/2022"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
-
-**Side Note**
-I orginally worked on a mlti-input neural network to make a better analysis of this topic, but the tensor flow at the end did not support the network since the example I was basing it off of in the book was designed for a previou sversion of Tensor Flow and was not supported by the one I was using, so this model you see here is a stripped and downgraded version of that previous model.
-
-
 
 ## Final Project
 
 In this project, we have found a dataset on Kaggle that tracks both Dow Jones Industrial Average (DJIA) performance and reddit News articles from r/worldnews subreddit.
 
 The objective of this project is to build a Neural Network that follows the stock market performance and connects it to the top 25 trending news articles on that day to predict daily performance of stocks based off of the news headlines that day. 
+
+**Side Note**
+I orginally worked on a mlti-input neural network to make a better analysis of this topic, but the tensor flow at the end did not support the network since the example I was basing it off of in the book was designed for a previous version of Tensor Flow and was not supported by the one I was using, so this model you see here is a stripped and downgraded version of that previous model.
+
 
 ## Getting Started
 
@@ -116,10 +117,6 @@ This model's best performance is at 4 epochs where we have a validation loss of 
 
 
 
-```{r}
-save_model_weights_hdf5(model, "Final_fixed.h5")
-```
-
 ## Using different techniques
 
 
@@ -199,6 +196,7 @@ history2 <- model2 %>% fit(
 
 
 
+
 This model instantly leveled out by epoch 4, leaving us with a validation accuracy of 53% and a loss of 69%. As we can see, increasing the input variable did not help our prediction model.
 
 
@@ -236,6 +234,11 @@ Even after changing input volume and model shape, the performance does not make 
 
 From both of these models we can see that It is difficult to predict market trends based off of social media news headlines alone. More data would be necessary to perform a more clean and clear analysis on such a topic.
 ```{r}
+plot(history)
+plot(history2)
+plot(history3)
+
+save_model_weights_hdf5(model, "Final_fixed.h5")
 save_model_weights_hdf5(model2, "Final_fixed2.h5")
 save_model_weights_hdf5(model3, "Final_fixed3.h5")
 
